@@ -16,7 +16,17 @@ Step-by-step documentation for deploying `address-service` to Google Cloud Run, 
 
 ---
 
-## 📋 2. Cloud Run Environment Variables
+## 🗄️ 2. Cloud Redis Cache Provider (Upstash Reference)
+
+* **Provider**: [Upstash Serverless Redis](https://upstash.com)
+* **Tier**: Free Forever (10,000 commands/day)
+* **Region**: `eu-west-1 (Ireland / Frankfurt)`
+* **TLS Encryption**: Enabled on Port `6379`
+* **Connection Format**: `redis-cli --tls -u redis://default:<password>@<endpoint-name>.upstash.io:6379`
+
+---
+
+## 📋 3. Cloud Run Environment Variables
 
 These variables are configured in the Google Cloud Run Service under **Container $\rightarrow$ Environment Variables**:
 
@@ -26,7 +36,7 @@ These variables are configured in the Google Cloud Run Service under **Container
 | `SPRING_PROFILES_ACTIVE` | Runtime | Spring Boot active profile | `prod` (or `docker`) |
 | `POSTCODES_API_URL` | Integration | Upstream UK Geocoding API endpoint | `https://api.postcodes.io` |
 | `API_TIMEOUT_MS` | Network | Timeout for external postcode requests | `3000` |
-| `REDIS_HOST` | Cache | Upstash / Cloud Redis endpoint hostname | `<upstash-redis-hostname>.upstash.io` |
+| `REDIS_HOST` | Cache | Upstash Redis endpoint hostname | `<upstash-redis-hostname>.upstash.io` |
 | `REDIS_PORT` | Cache | Redis port | `6379` |
 | `REDIS_PASSWORD` | Cache | Redis authentication password | `<upstash-redis-password>` |
 | `REDIS_SSL_ENABLED` | Cache | Enables TLS connection for cloud Redis | `true` |
@@ -34,7 +44,7 @@ These variables are configured in the Google Cloud Run Service under **Container
 
 ---
 
-## 🌐 3. Domain Mapping & Namecheap DNS
+## 🌐 4. Domain Mapping & Namecheap DNS
 
 ### Cloud Run Domain Mapping:
 * **Service**: `address-service (europe-west1)`
@@ -49,7 +59,7 @@ These variables are configured in the Google Cloud Run Service under **Container
 
 ---
 
-## 🤖 4. Automated CI/CD Deployment (GitHub Actions)
+## 🤖 5. Automated CI/CD Deployment (GitHub Actions)
 
 Every push to `main` executes `.github/workflows/docker-ci-cd.yml`:
 1. Executes unit & Cucumber 7 BDD test suite.
@@ -63,7 +73,7 @@ Every push to `main` executes `.github/workflows/docker-ci-cd.yml`:
 
 ---
 
-## 🔒 5. Health & Smoke Testing
+## 🔒 6. Health & Smoke Testing
 
 ```bash
 # 1. Health Probe
