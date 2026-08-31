@@ -110,3 +110,25 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ----------------------------------------------------------------------------
+  # Job 3: Continuous Deployment to Google Cloud Run
+  # ----------------------------------------------------------------------------
+  deploy-cloud-run:
+    name: Deploy to Google Cloud Run
+    needs: docker-publish
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: address-service
+          region: europe-west1
+          image: pkalita/address-service:latest

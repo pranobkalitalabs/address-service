@@ -122,6 +122,20 @@ gcloud run deploy address-service \
 
 ---
 
+## 🤖 Automated Continuous Deployment (GitHub Actions CD)
+
+Whenever you push to the `main` branch, GitHub Actions automatically:
+1. Executes the test suite & Cucumber BDD features.
+2. Builds the Docker image and publishes to Docker Hub.
+3. Automatically triggers **Google Cloud Run** to roll out a new revision with zero downtime.
+
+### Required GitHub Repository Secrets (`Settings -> Secrets and variables -> Actions`):
+- `DOCKERHUB_USERNAME`: Your Docker Hub username.
+- `DOCKERHUB_TOKEN`: Your Docker Hub personal access token.
+- `GCP_SA_KEY`: Google Cloud Service Account JSON Key (with `Cloud Run Admin` & `Service Account User` roles).
+
+---
+
 ## 🔒 Post-Deployment Health Check
 
 Test the live production deployment:
