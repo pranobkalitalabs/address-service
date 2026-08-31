@@ -6,28 +6,43 @@ This guide is designed for **QA Engineers, Testers, and Developers** to easily s
 
 ## 🚀 1. How to Run Locally
 
-### Option A: Run Pre-Built Container from Docker Hub (Fastest)
+### Option A: Standalone Docker Compose (1-Click Full Local Stack)
+If you are working on `address-service` independently:
 ```bash
-# 1. Start Redis
-docker run -d --name platform-redis -p 6379:6379 redis:7-alpine
-
-# 2. Run Address Service from Docker Hub
-docker run -d \
-  --name address-service \
-  -p 8082:8082 \
-  -e REDIS_HOST=localhost \
-  pkalita/address-service:latest
+cd address-service
+docker compose up -d
 ```
+This automatically boots:
+- `address-service` (Port **`8082`**)
+- `address-redis` (Port **`6379`**)
 
 ### Option B: Run via Local Maven
 ```bash
 # Start Redis container
-docker run -d --name platform-redis -p 6379:6379 redis:7-alpine
+docker run -d --name address-redis -p 6379:6379 redis:7-alpine
 
 # Start Spring Boot application
 mvn spring-boot:run
 ```
 The service will be live at: **`http://localhost:8082`**.
+
+---
+
+## 🥒 2. Behavior-Driven Development (BDD) Cucumber Testing
+
+We use **Cucumber 7**, **Gherkin (.feature files)**, and **REST Assured** for living test specifications:
+
+```bash
+# Run only the BDD Cucumber Suite:
+mvn test -Dtest=AddressCucumberTest
+
+# Run all Unit + Integration + BDD Tests:
+mvn clean test
+```
+
+### 📊 Living HTML Reports:
+Every test run automatically generates an interactive, styled HTML test report at:  
+👉 **`address-service/target/cucumber-reports/cucumber.html`** *(open in any web browser)*.
 
 ---
 

@@ -33,7 +33,7 @@ public class UkAddressServiceImpl implements UkAddressService {
             return false;
         }
 
-        String cleanedPostcode = postcode.trim().replaceAll("\\s+", "");
+        String cleanedPostcode = postcode.trim().replaceAll("\\s+", "").toUpperCase();
 
         try {
             JsonNode response = postcodesRestClient.get()

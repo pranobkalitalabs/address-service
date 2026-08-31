@@ -33,21 +33,24 @@ For detailed technical guides, please refer to the dedicated documents in the [`
 
 ---
 
-## ⚡ Quick Start & Maven Jib Build
+## ⚡ Quick Start & Docker Compose
 
-### 1. Build Local Container with Google Jib (5 Seconds)
+### 1. Run Standalone Address Stack (Redis + Address Service)
+```bash
+docker compose up -d
+```
+
+### 2. Build Local Container with Google Jib (5 Seconds)
 ```bash
 mvn compile jib:dockerBuild
 ```
 
-### 2. Run Container with Redis
+### 3. Run Behavior-Driven Development (BDD) Cucumber Tests
 ```bash
-# Start Redis
-docker run -d --name platform-redis -p 6379:6379 redis:7-alpine
-
-# Run Address Service
-docker run -d --name address-service -p 8082:8082 -e REDIS_HOST=localhost pkalita/address-service:latest
+# Run Gherkin feature scenarios
+mvn test -Dtest=AddressCucumberTest
 ```
+> 📊 **HTML Living Report**: Generated at `target/cucumber-reports/cucumber.html`.
 
 Test that the service is running:
 ```bash
