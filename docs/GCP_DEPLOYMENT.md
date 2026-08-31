@@ -1,152 +1,77 @@
-# ☁️ Google Cloud Platform (GCP) Deployment Guide
+# 🚀 Address Service - Google Cloud Platform (GCP) Deployment Guide
 
-This guide details the exact steps to deploy **`address-service`** to **Google Cloud Run** with **GCP Memorystore (Redis)** and custom domain mapping to **`address.pranobkalitalabs.co.uk`**.
-
----
-
-## 🏛️ GCP Architecture
-
-```
-                    Internet / Client HTTPS Request
-                                 │
-                                 ▼
-                 https://address.pranobkalitalabs.co.uk
-                                 │
-                                 ▼
-                     [ Google Cloud Run ]
-                     (Auto-scaling 0 - 10)
-                                 │
-                 ┌───────────────┴───────────────┐
-                 ▼                               ▼
-       [ GCP Memorystore ]             [ api.postcodes.io ]
-        (Managed Redis)                 (External OpenData)
-```
+Step-by-step documentation for deploying `address-service` to Google Cloud Run, configuring Upstash Redis with TLS, domain mapping on Namecheap, and GitHub Actions CI/CD automation.
 
 ---
 
-## 🛠️ Step-by-Step Deployment
+## 🏗️ 1. Service Specifications
 
-### Prerequisites
-1. **Google Cloud SDK (`gcloud`)** installed and authenticated (`gcloud auth login`).
-2. A GCP Project with billing enabled.
-3. Enabled APIs:
-   ```bash
-   gcloud services enable run.googleapis.com \
-                          artifactregistry.googleapis.com \
-                          redis.googleapis.com \
-                          vpcaccess.googleapis.com
-   ```
+* **Service Name**: `address-service`
+* **Region**: `europe-west1 (Belgium)`
+* **Container Image**: `pkalita/address-service:latest`
+* **Port**: `8082`
+* **Allocated Memory**: `512 MiB - 1 GiB`
+* **Allocated CPU**: `1 vCPU`
+* **Authentication**: `Allow unauthenticated invocations`
 
 ---
 
-### Step 1: Create an Artifact Registry Repository
-```bash
-export PROJECT_ID="your-gcp-project-id"
-export REGION="europe-west2" # London
-export REPO_NAME="pranobkalitalabs"
-export IMAGE_NAME="address-service"
+## 📋 2. Cloud Run Environment Variables
 
-# Create Docker repository in Artifact Registry
-gcloud artifacts repositories create ${REPO_NAME} \
-  --repository-format=docker \
-  --location=${REGION} \
-  --description="Pranob Kalita Labs Container Images"
-```
+These variables are configured in the Google Cloud Run Service under **Container $\rightarrow$ Environment Variables**:
 
----
-
-### Step 2: Build & Push Container Image
-```bash
-# Configure Docker authentication with GCP
-gcloud auth configure-docker ${REGION}-docker.pkg.dev
-
-# Build & Push
-docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest .
-docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest
-```
-
-*(Alternatively, you can pull directly from Docker Hub `pkalita/address-service:latest`)*.
+| Variable Name | Category | Purpose / Description | Format / Example Value |
+| :--- | :--- | :--- | :--- |
+| `PORT` | System | Container HTTP server port | `8082` |
+| `SPRING_PROFILES_ACTIVE` | Runtime | Spring Boot active profile | `prod` (or `docker`) |
+| `POSTCODES_API_URL` | Integration | Upstream UK Geocoding API endpoint | `https://api.postcodes.io` |
+| `API_TIMEOUT_MS` | Network | Timeout for external postcode requests | `3000` |
+| `REDIS_HOST` | Cache | Upstash / Cloud Redis endpoint hostname | `<upstash-redis-hostname>.upstash.io` |
+| `REDIS_PORT` | Cache | Redis port | `6379` |
+| `REDIS_PASSWORD` | Cache | Redis authentication password | `<upstash-redis-password>` |
+| `REDIS_SSL_ENABLED` | Cache | Enables TLS connection for cloud Redis | `true` |
+| `CORS_ALLOWED_ORIGINS` | Security | Allowed Web origins for cross-origin requests | `https://pranobkalitalabs.co.uk,https://*.pranobkalitalabs.co.uk` |
 
 ---
 
-### Step 3: Set Up GCP Memorystore (Redis) & Serverless VPC Access
-Cloud Run communicates with Memorystore Redis through a Serverless VPC Access connector:
+## 🌐 3. Domain Mapping & Namecheap DNS
+
+### Cloud Run Domain Mapping:
+* **Service**: `address-service (europe-west1)`
+* **Verified Domain**: `pranobkalitalabs.co.uk`
+* **Subdomain**: `address` *(mapping resolves to `address.pranobkalitalabs.co.uk`)*
+
+### Namecheap Host Record:
+* **Type**: `CNAME Record`
+* **Host**: `address`
+* **Value**: `ghs.googlehosted.com.`
+* **TTL**: `Automatic`
+
+---
+
+## 🤖 4. Automated CI/CD Deployment (GitHub Actions)
+
+Every push to `main` executes `.github/workflows/docker-ci-cd.yml`:
+1. Executes unit & Cucumber 7 BDD test suite.
+2. Builds multi-arch container image with Docker Buildx and pushes to Docker Hub.
+3. Authenticates with Google Cloud and rolls out a new Cloud Run revision.
+
+### Required GitHub Repository Secrets:
+* `DOCKERHUB_USERNAME`: Docker Hub user ID.
+* `DOCKERHUB_TOKEN`: Docker Hub Personal Access Token.
+* `GCP_SA_KEY`: Google Cloud Service Account JSON key (`Cloud Run Admin` + `Service Account User`).
+
+---
+
+## 🔒 5. Health & Smoke Testing
 
 ```bash
-# 1. Create a Serverless VPC Connector
-gcloud compute networks vpc-access connectors create redis-vpc-connector \
-  --region=${REGION} \
-  --range=10.8.0.0/28
+# 1. Health Probe
+curl -s https://address.pranobkalitalabs.co.uk/actuator/health
 
-# 2. Create Memorystore Redis Instance
-gcloud redis instances create address-redis \
-  --size=1 \
-  --region=${REGION} \
-  --tier=basic \
-  --redis-version=redis_7_0
-```
-Note the **Host IP** from the Redis instance output (e.g. `10.0.0.4`).
+# 2. Premise Lookup
+curl -s "https://address.pranobkalitalabs.co.uk/api/v1/address/uk/premises/HA9%207ES"
 
----
-
-### Step 4: Deploy to Google Cloud Run
-```bash
-gcloud run deploy address-service \
-  --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest \
-  --platform managed \
-  --region ${REGION} \
-  --allow-unauthenticated \
-  --vpc-connector redis-vpc-connector \
-  --set-env-vars="SPRING_PROFILES_ACTIVE=prod,REDIS_HOST=10.0.0.4,REDIS_PORT=6379,CORS_ALLOWED_ORIGINS=https://pranobkalitalabs.co.uk,https://*.pranobkalitalabs.co.uk" \
-  --min-instances=1 \
-  --max-instances=10 \
-  --memory=512Mi \
-  --cpu=1
-```
-
----
-
-### Step 5: Map Custom Domain (`address.pranobkalitalabs.co.uk`)
-
-1. **Create the domain mapping**:
-   ```bash
-   gcloud beta run domain-mappings create \
-     --service address-service \
-     --domain address.pranobkalitalabs.co.uk \
-     --region ${REGION}
-   ```
-2. **Update DNS Records**:
-   Google Cloud will provide DNS `CNAME` or `A` records (e.g. `ghs.googlehosted.com`).
-   Add this `CNAME` record in your domain registrar for `address.pranobkalitalabs.co.uk`.
-3. **Automatic SSL**: Google automatically provisions and manages free SSL/TLS certificates for your custom domain.
-
----
-
-## 🤖 Automated Continuous Deployment (GitHub Actions CD)
-
-Whenever you push to the `main` branch, GitHub Actions automatically:
-1. Executes the test suite & Cucumber BDD features.
-2. Builds the Docker image and publishes to Docker Hub.
-3. Automatically triggers **Google Cloud Run** to roll out a new revision with zero downtime.
-
-### Required GitHub Repository Secrets (`Settings -> Secrets and variables -> Actions`):
-- `DOCKERHUB_USERNAME`: Your Docker Hub username.
-- `DOCKERHUB_TOKEN`: Your Docker Hub personal access token.
-- `GCP_SA_KEY`: Google Cloud Service Account JSON Key (with `Cloud Run Admin` & `Service Account User` roles).
-
----
-
-## 🔒 Post-Deployment Health Check
-
-Test the live production deployment:
-
-```bash
-# Health probe
-curl https://address.pranobkalitalabs.co.uk/actuator/health
-
-# Premise lookup
-curl https://address.pranobkalitalabs.co.uk/api/v1/address/uk/premises/HA9%207ES
-
-# Swagger UI
+# 3. Swagger UI
 open https://address.pranobkalitalabs.co.uk/swagger-ui.html
 ```
