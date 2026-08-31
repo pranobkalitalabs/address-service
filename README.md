@@ -25,28 +25,33 @@ For detailed technical guides, please refer to the dedicated documents in the [`
 | Document | Description |
 | :--- | :--- |
 | 🏛️ [**Architecture & Service Overview**](./docs/SERVICE_OVERVIEW.md) | High-level system architecture, Redis caching strategy, open data integration, and fault tolerance fallback engine. |
+| 📊 [**Visual Workflow Diagrams**](./docs/WORKFLOW_DIAGRAMS.md) | Mermaid sequence diagrams and flowcharts for Redis caching, multi-premise dropdowns, and CI/CD lifecycle. |
 | 🧪 [**QA & Tester Guide**](./docs/TESTER_GUIDE.md) | Local startup instructions, `.env` variables reference table, standardized test postcodes cheat sheet (`HA9 7ES`, `SW1A 2AA`), and Redis inspection commands. |
 | 🔌 [**Microservice & Frontend Integration Guide**](./docs/INTEGRATION_GUIDE.md) | Production integration guides for Spring Boot microservices (`RestClient`, DTOs), React frontend dropdown components, and HTTP status codes dictionary. |
-| 📮 [**Postman Collection & Environments**](./docs/postman/address-service.postman_collection.json) | Ready-to-import Postman test collection with 8 automated requests and 16 assertions. |
+| 📮 [**Postman Collection & Environments**](./docs/postman/address-service.postman_collection.json) | Ready-to-import Postman test collection with 10 automated requests and 20 assertions. |
 | ☁️ [**GCP Deployment Guide**](./docs/GCP_DEPLOYMENT.md) | Step-by-step production deployment to Google Cloud Run, GCP Memorystore (Redis), and custom domain mapping for `address.pranobkalitalabs.co.uk`. |
 
 ---
 
-## ⚡ Quick Start (1-Liner)
+## ⚡ Quick Start & Maven Jib Build
 
-Run the full stack (Address Service + Redis) directly using Docker:
-
+### 1. Build Local Container with Google Jib (5 Seconds)
 ```bash
-# 1. Start Redis
+mvn compile jib:dockerBuild
+```
+
+### 2. Run Container with Redis
+```bash
+# Start Redis
 docker run -d --name platform-redis -p 6379:6379 redis:7-alpine
 
-# 2. Run Address Service (from Docker Hub)
+# Run Address Service
 docker run -d --name address-service -p 8082:8082 -e REDIS_HOST=localhost pkalita/address-service:latest
 ```
 
 Test that the service is running:
 ```bash
-curl http://localhost:8082/api/v1/address/uk/premises/HA9%207ES
+curl "http://localhost:8082/api/v1/address/uk/premises?postcode=HA9%207ES"
 ```
 
 ---

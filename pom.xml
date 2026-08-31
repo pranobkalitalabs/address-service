@@ -89,6 +89,44 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!-- Google Jib: Native Maven Docker Image Builder & Publisher -->
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.4.3</version>
+                <configuration>
+                    <from>
+                        <image>eclipse-temurin:21-jre-alpine</image>
+                        <platforms>
+                            <platform>
+                                <architecture>arm64</architecture>
+                                <os>linux</os>
+                            </platform>
+                            <platform>
+                                <architecture>amd64</architecture>
+                                <os>linux</os>
+                            </platform>
+                        </platforms>
+                    </from>
+                    <to>
+                        <image>docker.io/pkalita/${project.artifactId}</image>
+                        <tags>
+                            <tag>latest</tag>
+                            <tag>1.0.0</tag>
+                        </tags>
+                        <auth>
+                            <username>${env.DOCKERHUB_USERNAME}</username>
+                            <password>${env.DOCKERHUB_TOKEN}</password>
+                        </auth>
+                    </to>
+                    <container>
+                        <ports>
+                            <port>8082</port>
+                        </ports>
+                        <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+                    </container>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
