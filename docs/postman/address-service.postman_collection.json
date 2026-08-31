@@ -1,0 +1,419 @@
+{
+  "info": {
+    "_postman_id": "b73a2e19-48c1-4cf5-992a-35e69a03dc37",
+    "name": "Address Service API",
+    "description": "Postman Test Collection for the standalone UK Address & Geocoding Microservice (`address-service` running on port 8082 with Redis caching).\n\n### Features Covered:\n- **Query Param & Path Variable Support**: Accepts `?postcode=...` or `/{postcode}`\n- **Postcode Validation**: Active/valid UK postcode verification with fallback\n- **Geocoding & Administrative Lookup**: Geo coordinates (latitude, longitude), country, region, admin district, parliamentary constituency\n- **Premises & Complete Address Lookup**: Individual flat numbers, building names, and full street addresses for dropdown auto-population\n- **Autocomplete**: Partial UK postcode prefix search\n- **Actuator & OpenAPI**: System health checks and OpenAPI 3.0 specification",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "addressServiceUrl",
+      "value": "http://localhost:8082",
+      "type": "string"
+    },
+    {
+      "key": "testPostcode",
+      "value": "SW1A 2AA",
+      "type": "string"
+    },
+    {
+      "key": "wembleyPostcode",
+      "value": "HA9 7ES",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - UK Address & Postcodes",
+      "description": "Endpoints for postcode validation, details lookup, premise addresses list, and autocompletion supporting both Query Params and Path Variables.",
+      "item": [
+        {
+          "name": "1.1 Validate Postcode (Query Param)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Valid postcode returns true via query param\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/api/v1/address/uk/validate?postcode={{testPostcode}}",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["api", "v1", "address", "uk", "validate"],
+              "query": [
+                {
+                  "key": "postcode",
+                  "value": "{{testPostcode}}",
+                  "description": "UK Postcode to validate"
+                }
+              ]
+            },
+            "description": "Validates UK postcode passed as a Query Parameter in Postman's Params tab."
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Validate Postcode (Path Variable)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Valid postcode returns true via path variable\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/api/v1/address/uk/validate/{{testPostcode}}",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["api", "v1", "address", "uk", "validate", "{{testPostcode}}"]
+            },
+            "description": "Validates UK postcode passed directly in the URL path."
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Validate Postcode (Invalid - Query Param)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Invalid postcode returns false\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/api/v1/address/uk/validate?postcode=INVALID123",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["api", "v1", "address", "uk", "validate"],
+              "query": [
+                {
+                  "key": "postcode",
+                  "value": "INVALID123"
+                }
+              ]
+            },
+            "description": "Verifies that an invalid UK postcode returns data: false."
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Lookup Postcode Details (Query Param)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Lookup returns valid geolocation and district data\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.valid).to.be.true;",
+                  "    pm.expect(jsonData.data.postcode).to.eql(\"SW1A 2AA\");",
+                  "    pm.expect(jsonData.data.country).to.eql(\"England\");",
+                  "    pm.expect(jsonData.data.latitude).to.be.a(\"number\");",
+                  "    pm.expect(jsonData.data.longitude).to.be.a(\"number\");",
+                  "    pm.expect(jsonData.data.adminDistrict).to.eql(\"Westminster\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/api/v1/address/uk/lookup?postcode={{testPostcode}}",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["api", "v1", "address", "uk", "lookup"],
+              "query": [
+                {
+                  "key": "postcode",
+                  "value": "{{testPostcode}}",
+                  "description": "Target postcode to lookup"
+                }
+              ]
+            },
+            "description": "Retrieves geo coordinates, region, and district details using Query Params."
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Lookup Complete Premises (Query Param - HA9 7ES)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Premises list returned with multiple flat/building addresses\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.valid).to.be.true;",
+                  "    pm.expect(jsonData.data.totalPremises).to.be.at.least(5);",
+                  "    pm.expect(jsonData.data.addresses).to.be.an(\"array\");",
+                  "",
+                  "    // Validate first premise contains apartment details",
+                  "    const firstAddress = jsonData.data.addresses[0];",
+                  "    pm.expect(firstAddress.formattedAddress).to.include(\"Bluebell Apartments\");",
+                  "    pm.expect(firstAddress.addressLine1).to.not.be.empty;",
+                  "    pm.expect(firstAddress.city).to.eql(\"Wembley\");",
+                  "    pm.expect(firstAddress.postcode).to.include(\"HA9\");",
+                  "    pm.expect(firstAddress.latitude).to.be.a(\"number\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/api/v1/address/uk/premises?postcode={{wembleyPostcode}}",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["api", "v1", "address", "uk", "premises"],
+              "query": [
+                {
+                  "key": "postcode",
+                  "value": "{{wembleyPostcode}}",
+                  "description": "Wembley postcode with flats"
+                }
+              ]
+            },
+            "description": "Returns full list of individual premise addresses (flats, apartments, house numbers) for dropdown auto-population via Query Params."
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 Lookup Complete Premises (Path Variable - SW1A 2AA)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Downing Street premises returned successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data.valid).to.be.true;",
+                  "    pm.expect(jsonData.data.addresses.length).to.be.at.least(3);",
+                  "    pm.expect(jsonData.data.addresses[0].formattedAddress).to.include(\"10 Downing Street\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/api/v1/address/uk/premises/SW1A 2AA",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["api", "v1", "address", "uk", "premises", "SW1A 2AA"]
+            },
+            "description": "Fetches individual premise addresses for Downing Street SW1A 2AA via Path Variable."
+          },
+          "response": []
+        },
+        {
+          "name": "1.7 Autocomplete Postcodes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Autocomplete returns matching postcode list\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "    pm.expect(jsonData.data).to.be.an(\"array\");",
+                  "    pm.expect(jsonData.data.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/api/v1/address/uk/autocomplete?query=SW1A",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["api", "v1", "address", "uk", "autocomplete"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "SW1A"
+                }
+              ]
+            },
+            "description": "Returns suggestions for partial UK postcode queries."
+          },
+          "response": []
+        },
+        {
+          "name": "1.8 Missing Postcode Validation (400 Bad Request)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error envelope returns clear message\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.be.false;",
+                  "    pm.expect(jsonData.message).to.include(\"Postcode is required\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/api/v1/address/uk/lookup",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["api", "v1", "address", "uk", "lookup"]
+            },
+            "description": "Verifies that omitting the postcode returns a clear 400 Bad Request error."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Actuator & System",
+      "description": "Service monitoring, health checks, and OpenAPI JSON documentation.",
+      "item": [
+        {
+          "name": "2.1 Actuator Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Address Service status is UP\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"UP\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/actuator/health",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Checks the health status of address-service."
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 OpenAPI v3 JSON Schema",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"OpenAPI document generated for Address Service\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.openapi).to.exist;",
+                  "    pm.expect(jsonData.info.title).to.include(\"Address\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{addressServiceUrl}}/v3/api-docs",
+              "host": ["{{addressServiceUrl}}"],
+              "path": ["v3", "api-docs"]
+            },
+            "description": "Fetches the OpenAPI 3.0 documentation JSON schema for address-service."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

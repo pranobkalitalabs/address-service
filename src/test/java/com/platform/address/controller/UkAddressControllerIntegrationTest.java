@@ -18,8 +18,18 @@ class UkAddressControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @Test
-    void testValidatePostcode_Valid() throws Exception {
+    void testValidatePostcode_Path_Valid() throws Exception {
         mockMvc.perform(get("/api/v1/address/uk/validate/SW1A 2AA")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(true));
+    }
+
+    @Test
+    void testValidatePostcode_QueryParam_Valid() throws Exception {
+        mockMvc.perform(get("/api/v1/address/uk/validate")
+                        .param("postcode", "SW1A 2AA")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -36,7 +46,7 @@ class UkAddressControllerIntegrationTest {
     }
 
     @Test
-    void testLookupPostcode() throws Exception {
+    void testLookupPostcode_Path() throws Exception {
         mockMvc.perform(get("/api/v1/address/uk/lookup/SW1A 2AA")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -46,7 +56,18 @@ class UkAddressControllerIntegrationTest {
     }
 
     @Test
-    void testLookupPremises() throws Exception {
+    void testLookupPostcode_QueryParam() throws Exception {
+        mockMvc.perform(get("/api/v1/address/uk/lookup")
+                        .param("postcode", "SW1A 2AA")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.valid").value(true))
+                .andExpect(jsonPath("$.data.postcode").value("SW1A 2AA"));
+    }
+
+    @Test
+    void testLookupPremises_Path() throws Exception {
         mockMvc.perform(get("/api/v1/address/uk/premises/HA9 7ES")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -55,6 +76,28 @@ class UkAddressControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.postcode").value("HA9 7ES"))
                 .andExpect(jsonPath("$.data.totalPremises").isNumber())
                 .andExpect(jsonPath("$.data.addresses[0].formattedAddress").isNotEmpty());
+    }
+
+    @Test
+    void testLookupPremises_QueryParam() throws Exception {
+        mockMvc.perform(get("/api/v1/address/uk/premises")
+                        .param("postcode", "HA9 7ES")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.valid").value(true))
+                .andExpect(jsonPath("$.data.postcode").value("HA9 7ES"))
+                .andExpect(jsonPath("$.data.totalPremises").isNumber())
+                .andExpect(jsonPath("$.data.addresses[0].formattedAddress").isNotEmpty());
+    }
+
+    @Test
+    void testMissingPostcode_Returns400() throws Exception {
+        mockMvc.perform(get("/api/v1/address/uk/lookup")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Postcode is required. Please provide it as a query parameter (?postcode=...) or in the URL path."));
     }
 
     @Test
