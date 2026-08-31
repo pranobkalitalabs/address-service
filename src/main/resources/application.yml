@@ -7,7 +7,10 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      timeout: 2000ms
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:false}
+      timeout: 3000ms
   cache:
     type: redis
     redis:
